@@ -1,59 +1,76 @@
-import { Tabs } from "expo-router";
+import { Tabs as ExpoTabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
 
 export default function TabLayout() {
   return (
-    <Tabs
+    <ExpoTabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#0D1117",
-          borderTopColor: "#1A2332",
-          height: Platform.OS === "ios" ? 85 : 65,
-          paddingBottom: Platform.OS === "ios" ? 25 : 8,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "rgba(0,0,0,0.05)",
+          height: Platform.OS === "ios" ? 85 : 70,
+          paddingBottom: Platform.OS === "ios" ? 25 : 12,
+          paddingTop: 8,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          position: "absolute",
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 10,
         },
-        tabBarActiveTintColor: "#00D4FF",
-        tabBarInactiveTintColor: "#4A5568",
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarActiveTintColor: "#064E3B",
+        tabBarInactiveTintColor: "#6B7280",
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 4 },
       }}
     >
-      <Tabs.Screen
+      <ExpoTabs.Screen
         name="index"
         options={{
           title: "Dashboard",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="speedometer-outline" size={size} color={color} />
+            <Ionicons name="grid" size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <ExpoTabs.Screen
+        name="simulator"
+        options={{
+          title: "Simulator",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="hardware-chip" size={size} color={color} />
+          ),
+        }}
+      />
+      <ExpoTabs.Screen
         name="diagnostics"
         options={{
           title: "Diagnostics",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="medkit-outline" size={size} color={color} />
+            <Ionicons name="medkit" size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <ExpoTabs.Screen
         name="map"
         options={{
           title: "Nearby Fix",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size} color={color} />
+            <Ionicons name="map" size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <ExpoTabs.Screen
         name="history"
         options={{
           title: "History",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
+            <Ionicons name="time" size={size} color={color} />
           ),
         }}
       />
-    </Tabs>
+    </ExpoTabs>
   );
 }

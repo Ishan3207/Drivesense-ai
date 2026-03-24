@@ -6,6 +6,7 @@
  * for production accuracy. Triggers alerts and score deductions.
  */
 
+import { Platform } from "react-native";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { MOCK_ZONES } from "@/constants/mockZones";
@@ -65,20 +66,23 @@ function checkPosition(lat: number, lon: number, speedKmh: number) {
 
 // ── Background Location Task ──────────────────────────────────────────────────
 
-TaskManager.defineTask(GEOFENCE_TASK, ({ data, error }: any) => {
-  if (error) {
-    console.error("[Geofence]", error);
-    return;
-  }
-  const { locations } = data;
-  const loc = locations?.[0];
-  if (!loc) return;
+if (Platform.OS !== "web") {
+  TaskManager.defineTask(GEOFENCE_TASK, ({ data, error }: any) => {
+    if (error) {
+      console.error("[Geofence]", error);
+      return;
+    }
+    const { locations } = data;
+    const loc = locations?.[0];
+    if (!loc) return;
 
-  const speedKmh = (loc.coords.speed ?? 0) * 3.6; // m/s → km/h
-  checkPosition(loc.coords.latitude, loc.coords.longitude, speedKmh);
-});
+    const speedKmh = (loc.coords.speed ?? 0) * 3.6; // m/s → km/h
+    checkPosition(loc.coords.latitude, loc.coords.longitude, speedKmh);
+  });
+}
 
 export async function startGeofenceMonitoring() {
+  if (Platform.OS === "web") return;
   const { status } = await Location.requestBackgroundPermissionsAsync();
   if (status !== "granted") {
     console.warn("[Geofence] Background location permission denied.");
@@ -103,6 +107,7 @@ export async function startGeofenceMonitoring() {
 }
 
 export async function stopGeofenceMonitoring() {
+  if (Platform.OS === "web") return;
   const isRegistered = await TaskManager.isTaskRegisteredAsync(GEOFENCE_TASK);
   if (isRegistered) {
     await Location.stopLocationUpdatesAsync(GEOFENCE_TASK);

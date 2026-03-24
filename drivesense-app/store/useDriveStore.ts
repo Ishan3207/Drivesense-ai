@@ -13,6 +13,9 @@ export interface TelemetryFrame {
   maf_g_per_sec: number;
   battery_voltage: number;
   active_dtcs: string[];
+  gear: number;
+  oil_temp_c: number;
+  turbo_boost_psi: number;
   timestamp: number;
 }
 

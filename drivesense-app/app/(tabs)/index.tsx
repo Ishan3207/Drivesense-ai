@@ -1,48 +1,51 @@
 import React, { useCallback, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Dimensions,
+  ActivityIndicator, Alert, Dimensions, Platform
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, DropShadow } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 
 import { useDriveStore } from "@/store/useDriveStore";
 import { fetchActiveDTCs } from "@/services/api";
 import { Config } from "@/constants/config";
 
 const { width: SCREEN_W } = Dimensions.get("window");
-const GAUGE_SIZE = Math.min(SCREEN_W * 0.4, 160);
+const GAUGE_SIZE = Math.min(SCREEN_W * 0.35, 140);
 
-// ── Shared Neon Arc Gauge ──────────────────────────────────────────────────
+// Design Tokens (Home Care App inspired)
+const COLORS = {
+  background: "#C9D6BC", // Sage green
+  primary: "#064E3B",    // Dark Emerald
+  accent: "#F59E0B",     // Vibrant Orange
+  teal: "#0D9488",
+  cardLight: "#FFFFFF",
+  cardDark: "#1F2937",
+  cardSoft: "#FEF3C7",
+  textDark: "#111827",
+  textMuted: "#6B7280",
+  textLight: "#FFFFFF",
+  error: "#DC2626",
+};
 
-function NeonGauge({
-  value, max, label, unit, color = "#00D4FF", size = GAUGE_SIZE
-}: {
-  value: number; max: number; label: string; unit: string; color?: string; size?: number;
-}) {
-  const radius = size * 0.38;
-  const stroke = 10;
+// ── Shared Flat Gauge (Clean, solid design) ─────────────────────────
+function FlatGauge({ value, max, label, unit, color = COLORS.primary }: { value: number; max: number; label: string; unit: string; color?: string; }) {
+  const radius = GAUGE_SIZE * 0.38;
+  const stroke = 12;
   const circumference = radius * 2 * Math.PI;
   const pct = Math.min(value / max, 1);
-  const strokeDashoffset = circumference - pct * circumference * 0.75; // 270 deg
-  const cx = size / 2;
-  const cy = size / 2;
+  const strokeDashoffset = circumference - pct * circumference * 0.75;
+  const cx = GAUGE_SIZE / 2;
+  const cy = GAUGE_SIZE / 2;
 
   return (
-    <View style={[gaugeS.container, { width: size, height: size }]}>
-      <Svg width={size} height={size}>
-        <Defs>
-          <SvgGradient id={`grad-${label}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={color} stopOpacity="1" />
-            <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
-          </SvgGradient>
-        </Defs>
+    <View style={gaugeS.container}>
+      <Svg width={GAUGE_SIZE} height={GAUGE_SIZE}>
         {/* Track */}
         <Circle
           cx={cx} cy={cy} r={radius}
-          stroke="rgba(255,255,255,0.05)"
+          stroke="rgba(0,0,0,0.06)"
           strokeWidth={stroke} fill="transparent"
           strokeDasharray={`${circumference * 0.75} ${circumference}`}
           strokeDashoffset={0} strokeLinecap="round"
@@ -51,7 +54,7 @@ function NeonGauge({
         {/* Progress Arc */}
         <Circle
           cx={cx} cy={cy} r={radius}
-          stroke={`url(#grad-${label})`}
+          stroke={color}
           strokeWidth={stroke} fill="transparent"
           strokeDasharray={`${circumference * 0.75} ${circumference}`}
           strokeDashoffset={strokeDashoffset} strokeLinecap="round"
@@ -59,7 +62,7 @@ function NeonGauge({
         />
       </Svg>
       <View style={gaugeS.labelBox}>
-        <Text style={[gaugeS.value, { color, textShadowColor: color, textShadowRadius: 8 }]}>
+        <Text style={[gaugeS.value, { color: COLORS.textDark }]}>
           {Math.round(value)}
         </Text>
         <Text style={gaugeS.unit}>{unit}</Text>
@@ -70,24 +73,23 @@ function NeonGauge({
 }
 
 const gaugeS = StyleSheet.create({
-  container: { alignItems: "center", justifyContent: "center" },
+  container: { alignItems: "center", justifyContent: "center", width: GAUGE_SIZE, height: GAUGE_SIZE },
   labelBox: { position: "absolute", alignItems: "center" },
-  value: { fontSize: 28, fontWeight: "900", textShadowOffset: { width: 0, height: 0 } },
-  unit: { fontSize: 11, color: "#7C8FA6", fontWeight: "700", marginTop: -4 },
-  label: { fontSize: 10, color: "#4A5568", fontWeight: "800", marginTop: 4, letterSpacing: 1 },
+  value: { fontSize: 28, fontWeight: "800" },
+  unit: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600", marginTop: -2 },
+  label: { fontSize: 10, color: COLORS.textDark, fontWeight: "700", marginTop: 4, letterSpacing: 0.5 },
 });
 
-// ── Score Ring ────────────────────────────────────────────────────────────
-
+// ── Score Ring (In a clean white card) ──────────────────────────────────
 function ScoreRing({ score }: { score: number }) {
-  const color = score >= Config.SCORE_TIERS.EXCELLENT ? "#00E87B"
-              : score >= Config.SCORE_TIERS.GOOD ? "#FFB800" : "#FF4757";
+  const color = score >= Config.SCORE_TIERS.EXCELLENT ? COLORS.teal
+              : score >= Config.SCORE_TIERS.GOOD ? COLORS.accent : COLORS.error;
   const tier = score >= Config.SCORE_TIERS.EXCELLENT ? "EXCELLENT"
              : score >= Config.SCORE_TIERS.GOOD ? "GOOD" : "POOR";
 
   return (
     <View style={s.scoreBox}>
-      <NeonGauge value={score} max={100} label="DRIVER SCORE" unit={tier} color={color} size={150} />
+      <FlatGauge value={score} max={100} label="SCORE" unit={tier} color={color} />
     </View>
   );
 }
@@ -107,8 +109,7 @@ function getTip(rpm: number, load: number, speed: number) {
   return EFFICIENCY_TIPS[Math.floor(Date.now() / 10000) % EFFICIENCY_TIPS.length];
 }
 
-// ── Dashboard Screen ────────────────────────────────────────────────────────
-
+// ── Dashboard Screen ──────────────────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
   const {
@@ -132,118 +133,140 @@ export default function DashboardScreen() {
   }, []);
 
   return (
-    <LinearGradient colors={["#05080F", "#0A111F", "#05080F"]} style={s.bg}>
+    <View style={s.bg}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Top Header ── */}
         <View style={s.header}>
           <View>
-            <Text style={s.logo}>DriveSense<Text style={{color:"#00D4FF"}}>AI</Text></Text>
+            <Text style={s.logo}>Drive<Text style={{color: COLORS.primary}}>Sense</Text></Text>
             <View style={s.statusRow}>
-              <View style={[s.blob, { backgroundColor: isConnected ? "#00E87B" : "#FF4757" }]} />
-              <Text style={s.subtitle}>{isConnected ? "LINK ESTABLISHED" : "LINK OFFLINE"}</Text>
+              <View style={[s.blob, { backgroundColor: isConnected ? COLORS.primary : COLORS.error }]} />
+              <Text style={s.subtitle}>{isConnected ? "Connected" : "Offline"}</Text>
             </View>
           </View>
           <TouchableOpacity style={s.iconBtn}>
-            <Ionicons name="apps-outline" size={24} color="#7C8FA6" />
+            <Ionicons name="person-circle" size={36} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* ── Speed Alert ── */}
-        {isAlerting && activeZone && (
-          <LinearGradient colors={["#FF475733", "#00000000"]} style={s.alertBanner}>
-            <Ionicons name="warning" size={24} color="#FF4757" />
-            <Text style={s.alertText}>
-              SPEED ALERT: {activeZone.name.toUpperCase()}
-            </Text>
-          </LinearGradient>
+        {/* ── Active Faults Alert (Orange Card) ── */}
+        {activeDTCs.length > 0 && (
+          <TouchableOpacity style={[s.bentoCard, s.dtcCard]} onPress={() => router.push("/(tabs)/diagnostics")}>
+            <Ionicons name="warning" size={28} color="#fff" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={s.dtcTitle}>Requires Attention</Text>
+              <Text style={s.dtcSub}>{activeDTCs.length} Active Faults</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#fff" />
+          </TouchableOpacity>
         )}
 
-        {/* ── Telemetry HUD ── */}
-        <View style={s.hudRow}>
-          <NeonGauge value={telemetry?.speed_kmh ?? 0} max={200} label="SPEED" unit="KM/H" color="#00D4FF" />
-          <NeonGauge value={telemetry?.rpm ?? 0} max={8000} label="ENGINE" unit="RPM" color="#7B61FF" />
+        {/* ── Primary Action Card (Dark Emerald) ── */}
+        <View style={[s.bentoCard, s.primaryCard]}>
+          <View style={s.primaryCardHeader}>
+            <Text style={s.primaryCardTitle}>Vehicle Telemetry</Text>
+            <TouchableOpacity style={s.primaryCardAction} onPress={handleScan} disabled={isScanning}>
+              {isScanning ? <ActivityIndicator color={COLORS.primary} size="small" /> : <Ionicons name="scan" size={20} color={COLORS.primary} />}
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.hudRow}>
+            <View style={s.hudItem}>
+              <Text style={s.hudVal}>{telemetry?.speed_kmh ?? 0}</Text>
+              <Text style={s.hudLbl}>km/h</Text>
+            </View>
+            <View style={s.hudDivider} />
+            <View style={s.hudItem}>
+              <Text style={s.hudVal}>{telemetry?.rpm ?? 0}</Text>
+              <Text style={s.hudLbl}>rpm</Text>
+            </View>
+          </View>
         </View>
 
-        <ScoreRing score={driverScore} />
+        {/* ── Center Flex Row (Score & Coach) ── */}
+        <View style={s.row}>
+          <View style={[s.bentoCard, s.whiteCard, { flex: 1, alignItems: "center", paddingVertical: 20 }]}>
+            <ScoreRing score={driverScore} />
+          </View>
+          <View style={{ flex: 1, gap: 16 }}>
+            <View style={[s.bentoCard, s.cardSoft]}>
+              <Ionicons name="bulb-outline" size={24} color={COLORS.accent} />
+              <Text style={s.coachText} numberOfLines={3}>{tip}</Text>
+            </View>
+            {isAlerting && activeZone && (
+               <View style={[s.bentoCard, s.cardError]}>
+                 <Ionicons name="speedometer" size={20} color={COLORS.textLight} />
+                 <Text style={[s.coachText, { color: COLORS.textLight, marginTop: 4 }]}>Over Speed Limit</Text>
+               </View>
+            )}
+           </View>
+        </View>
 
-        {/* ── Glass Stat Grid ── */}
+        {/* ── Bento Grid Stats ── */}
         <View style={s.grid}>
           {[
-            { icon: "flame", val: `${Math.round(telemetry?.engine_load_pct ?? 0)}%`, iColor: "#FF6B35" },
-            { icon: "thermometer", val: `${Math.round(telemetry?.coolant_temp_c ?? 0)}°C`, iColor: "#FF4757" },
-            { icon: "water", val: `${Math.round(telemetry?.fuel_level_pct ?? 0)}%`, iColor: "#FFB800" },
-            { icon: "battery-charging", val: `${telemetry?.battery_voltage?.toFixed(1) ?? "--"}V`, iColor: "#00E87B" },
+            { icon: "flame", val: `${Math.round(telemetry?.engine_load_pct ?? 0)}%`, lbl: "Eng Load" },
+            { icon: "thermometer", val: `${Math.round(telemetry?.coolant_temp_c ?? 0)}°C`, lbl: "Coolant" },
+            { icon: "water", val: `${Math.round(telemetry?.fuel_level_pct ?? 0)}%`, lbl: "Fuel" },
+            { icon: "battery-charging", val: `${telemetry?.battery_voltage?.toFixed(1) ?? "--"}V`, lbl: "Battery" },
           ].map((st, i) => (
-            <View key={i} style={[s.glassCard, { borderLeftColor: st.iColor, borderLeftWidth: 2 }]}>
-              <Ionicons name={st.icon as any} size={20} color={st.iColor} />
-              <Text style={s.gridVal}>{st.val}</Text>
+            <View key={i} style={[s.bentoCard, s.statCard]}>
+              <View style={s.statIconWrap}>
+                 <Ionicons name={st.icon as any} size={20} color={COLORS.primary} />
+              </View>
+              <Text style={s.statVal}>{st.val}</Text>
+              <Text style={s.statLbl}>{st.lbl}</Text>
             </View>
           ))}
         </View>
-
-        {/* ── Active Faults Alert ── */}
-        {activeDTCs.length > 0 && (
-          <TouchableOpacity style={s.dtcAlert} onPress={() => router.push("/(tabs)/diagnostics")}>
-            <LinearGradient colors={["#FF4757", "#8A0000"]} style={s.dtcGrad} start={{x:0,y:0}} end={{x:1,y:1}}>
-              <Ionicons name="nuclear" size={24} color="#fff" />
-              <View style={{ flex: 1 }}>
-                <Text style={s.dtcTitle}>CRITICAL ALERT</Text>
-                <Text style={s.dtcSub}>{activeDTCs.length} FAULT(S) DETECTED</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {/* ── AI Coach Tip ── */}
-        <View style={s.coachCard}>
-          <Ionicons name="pulse" size={20} color="#00D4FF" />
-          <Text style={s.coachText}>{tip}</Text>
-        </View>
-
-        {/* ── Scan FAB ── */}
-        <TouchableOpacity style={s.scanWrap} activeOpacity={0.8} onPress={handleScan} disabled={isScanning}>
-          <LinearGradient colors={isScanning ? ["#1A2332", "#1A2332"] : ["#00F0FF", "#0066CC"]} style={s.scanBtn} start={{x:0,y:0}} end={{x:1,y:1}}>
-            {isScanning ? <ActivityIndicator color="#fff" /> : <Ionicons name="scan-outline" size={24} color="#fff" />}
-            <Text style={s.scanTxt}>{isScanning ? "SYSTEM SCANNING..." : "RUN DIAGNOSTICS"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        
         {scanErr && <Text style={s.err}>{scanErr}</Text>}
-
+        <View style={{height: 40}} />
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  bg: { flex: 1 },
-  scroll: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 50 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 },
-  logo: { fontSize: 28, fontWeight: "900", color: "#fff", letterSpacing: -1 },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  blob: { width: 8, height: 8, borderRadius: 4, shadowOffset: {width:0,height:0}, shadowOpacity: 1, shadowRadius: 6 },
-  subtitle: { fontSize: 10, color: "#7C8FA6", fontWeight: "800", letterSpacing: 1 },
-  iconBtn: { backgroundColor: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12 },
-  alertBanner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: "#FF475766", marginBottom: 20 },
-  alertText: { color: "#FF4757", fontSize: 13, fontWeight: "800", letterSpacing: 1 },
-  hudRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  scoreBox: { alignItems: "center", marginVertical: 10 },
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12, marginTop: 10 },
-  glassCard: {
-    backgroundColor: "rgba(255,255,255,0.02)", width: (SCREEN_W - 52) / 2, padding: 16,
-    borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)",
-    flexDirection: "row", alignItems: "center", gap: 12
-  },
-  gridVal: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  dtcAlert: { marginTop: 20, borderRadius: 16, overflow: "hidden" },
-  dtcGrad: { flexDirection: "row", alignItems: "center", gap: 14, padding: 18 },
-  dtcTitle: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 1 },
-  dtcSub: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "700", marginTop: 2, letterSpacing: 0.5 },
-  coachCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(0, 212, 255, 0.05)", padding: 16, borderRadius: 16, marginTop: 20, borderWidth: 1, borderColor: "rgba(0, 212, 255, 0.15)" },
-  coachText: { color: "#00D4FF", fontSize: 12, fontWeight: "600", flex: 1, lineHeight: 18 },
-  scanWrap: { marginTop: 30, borderRadius: 100, shadowColor: "#00F0FF", shadowOpacity: 0.3, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
-  scanBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18, borderRadius: 100 },
-  scanTxt: { color: "#fff", fontSize: 15, fontWeight: "900", letterSpacing: 1 },
-  err: { color: "#FF4757", fontSize: 12, textAlign: "center", marginTop: 12 },
+  bg: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 60 : 40, paddingBottom: 50 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
+  logo: { fontSize: 28, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.5 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  blob: { width: 8, height: 8, borderRadius: 4 },
+  subtitle: { fontSize: 13, color: COLORS.textMuted, fontWeight: "600" },
+  iconBtn: { padding: 4 },
+  
+  bentoCard: { borderRadius: 32, padding: 20, overflow: "hidden" },
+  
+  dtcCard: { backgroundColor: COLORS.accent, flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  dtcTitle: { color: COLORS.textLight, fontSize: 16, fontWeight: "700" },
+  dtcSub: { color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: "500" },
+  
+  primaryCard: { backgroundColor: COLORS.primary, marginBottom: 16, paddingBottom: 32 },
+  primaryCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  primaryCardTitle: { color: COLORS.textLight, fontSize: 18, fontWeight: "600" },
+  primaryCardAction: { backgroundColor: "#fff", width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  
+  hudRow: { flexDirection: "row", justifyContent: "space-evenly", alignItems: "center" },
+  hudItem: { alignItems: "center" },
+  hudVal: { fontSize: 42, fontWeight: "800", color: COLORS.textLight },
+  hudLbl: { fontSize: 14, color: "rgba(255,255,255,0.7)", fontWeight: "500", marginTop: -4 },
+  hudDivider: { width: 1, height: 40, backgroundColor: "rgba(255,255,255,0.2)" },
+  
+  row: { flexDirection: "row", gap: 16, marginBottom: 16 },
+  whiteCard: { backgroundColor: COLORS.cardLight },
+  cardSoft: { backgroundColor: COLORS.cardSoft, flex: 1, justifyContent: "center", padding: 16 },
+  cardError: { backgroundColor: COLORS.error, padding: 16, borderRadius: 24 },
+  coachText: { color: COLORS.textDark, fontSize: 13, fontWeight: "500", marginTop: 8, lineHeight: 18 },
+  scoreBox: { alignItems: "center", justifyContent: "center" },
+  
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 16 },
+  statCard: { backgroundColor: COLORS.cardLight, width: (SCREEN_W - 56) / 2, padding: 20, borderRadius: 28 },
+  statIconWrap: { backgroundColor: COLORS.background, alignSelf: "flex-start", padding: 10, borderRadius: 16, marginBottom: 12 },
+  statVal: { color: COLORS.textDark, fontSize: 20, fontWeight: "700" },
+  statLbl: { color: COLORS.textMuted, fontSize: 13, fontWeight: "500", marginTop: 2 },
+  
+  err: { color: COLORS.error, fontSize: 13, textAlign: "center", marginTop: 24, fontWeight: "500" },
 });

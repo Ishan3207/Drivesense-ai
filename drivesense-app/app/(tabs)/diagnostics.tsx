@@ -1,9 +1,8 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Platform
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -11,41 +10,57 @@ import { useDriveStore } from "@/store/useDriveStore";
 import { fetchActiveDTCs, analyzeDTC } from "@/services/api";
 import type { DTCEntry } from "@/store/useDriveStore";
 
+const COLORS = {
+  background: "#C9D6BC",
+  primary: "#064E3B",
+  accent: "#F59E0B",
+  teal: "#0D9488",
+  cardLight: "#FFFFFF",
+  cardDark: "#1F2937",
+  cardSoft: "#FEF3C7",
+  textDark: "#111827",
+  textMuted: "#6B7280",
+  textLight: "#FFFFFF",
+  error: "#DC2626",
+};
+
 const SEVERITY_CONFIG = {
-  low:      { color: "#00E87B", icon: "checkmark-circle" },
-  medium:   { color: "#FFB800", icon: "warning" },
-  high:     { color: "#FF6B35", icon: "alert-circle" },
-  critical: { color: "#FF4757", icon: "nuclear" },
+  low:      { color: COLORS.teal, icon: "checkmark-circle" },
+  medium:   { color: COLORS.accent, icon: "warning" },
+  high:     { color: "#ea580c", icon: "alert-circle" },
+  critical: { color: COLORS.error, icon: "nuclear" },
 } as const;
 
 function DTCCard({ dtc, onAnalyze, isAnalyzing }: { dtc: DTCEntry; onAnalyze: (code: string) => void; isAnalyzing: boolean; }) {
   const cfg = SEVERITY_CONFIG[dtc.severity] ?? SEVERITY_CONFIG.medium;
   return (
-    <LinearGradient colors={["rgba(255,255,255,0.03)", "rgba(255,255,255,0.01)"]} style={[s.card, { borderLeftColor: cfg.color }]}>
+    <View style={s.card}>
       <View style={s.cardHeader}>
-        <Ionicons name={cfg.icon as any} size={24} color={cfg.color} />
+        <View style={[s.iconBg, { backgroundColor: cfg.color + "15" }]}>
+          <Ionicons name={cfg.icon as any} size={24} color={cfg.color} />
+        </View>
         <View style={s.cardTitle}>
-          <Text style={[s.dtcCode, { color: cfg.color, textShadowColor: cfg.color, textShadowRadius: 8 }]}>{dtc.code}</Text>
-          <View style={[s.severityBadge, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "55", borderWidth: 1 }]}>
-            <Text style={[s.severityText, { color: cfg.color }]}>{dtc.severity.toUpperCase()}</Text>
+          <Text style={s.dtcCode}>{dtc.code}</Text>
+          <View style={[s.severityBadge, { backgroundColor: cfg.color }]}>
+            <Text style={s.severityText}>{dtc.severity.toUpperCase()}</Text>
           </View>
         </View>
       </View>
       <Text style={s.dtcDesc}>{dtc.description}</Text>
       <TouchableOpacity
-        style={[s.analyzeBtn, { backgroundColor: cfg.color + "11", borderColor: cfg.color + "33" }]}
+        style={[s.analyzeBtn, { backgroundColor: COLORS.primary }]}
         onPress={() => onAnalyze(dtc.code)} disabled={isAnalyzing}
       >
         {isAnalyzing ? (
-          <ActivityIndicator size="small" color={cfg.color} />
+          <ActivityIndicator size="small" color={COLORS.textLight} />
         ) : (
           <>
-            <Ionicons name="sparkles" size={16} color={cfg.color} />
-            <Text style={[s.analyzeBtnText, { color: cfg.color }]}>ANALYZE WITH AI MECHANIC</Text>
+            <Ionicons name="sparkles" size={16} color={COLORS.textLight} />
+            <Text style={s.analyzeBtnText}>Analyze Issue with AI</Text>
           </>
         )}
       </TouchableOpacity>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -77,7 +92,7 @@ export default function DiagnosticsScreen() {
   }, []);
 
   return (
-    <LinearGradient colors={["#05080F", "#0A111F", "#05080F"]} style={s.bg}>
+    <View style={s.bg}>
       <View style={s.header}>
         <Text style={s.title}>System Diagnostics</Text>
         <Text style={s.subtitle}>OBD-II FAULT LOGS</Text>
@@ -86,9 +101,9 @@ export default function DiagnosticsScreen() {
       {activeDTCs.length === 0 ? (
         <View style={s.empty}>
           <View style={s.glowCircle}>
-            <Ionicons name="checkmark-done" size={80} color="#00E87B" />
+            <Ionicons name="checkmark-done" size={60} color={COLORS.teal} />
           </View>
-          <Text style={s.emptyTitle}>SYSTEM NOMINAL</Text>
+          <Text style={s.emptyTitle}>System Nominal</Text>
           <Text style={s.emptyBody}>No active faults detected in the vehicle bus.</Text>
         </View>
       ) : (
@@ -97,45 +112,43 @@ export default function DiagnosticsScreen() {
           keyExtractor={(item) => item.code}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#00D4FF" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.primary} />}
           renderItem={({ item }) => (
             <DTCCard dtc={item} onAnalyze={handleAnalyze} isAnalyzing={analyzingCode === item.code} />
           )}
         />
       )}
-    </LinearGradient>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  bg: { flex: 1 },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
-  title: { fontSize: 26, fontWeight: "900", color: "#fff", letterSpacing: -0.5 },
-  subtitle: { fontSize: 11, color: "#00D4FF", fontWeight: "800", marginTop: 4, letterSpacing: 1.5 },
-  list: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
+  bg: { flex: 1, backgroundColor: COLORS.background },
+  header: { paddingTop: Platform.OS === "ios" ? 60 : 40, paddingHorizontal: 20, paddingBottom: 16 },
+  title: { fontSize: 26, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: COLORS.textMuted, fontWeight: "600", marginTop: 4 },
+  list: { paddingHorizontal: 20, paddingBottom: 100, gap: 16 },
   card: {
-    borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)",
-    borderLeftWidth: 4, padding: 20,
-    shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }
+    backgroundColor: COLORS.cardLight,
+    borderRadius: 24, padding: 20,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  iconBg: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   cardTitle: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
-  dtcCode: { fontSize: 22, fontWeight: "900", letterSpacing: 1 },
-  severityBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  severityText: { fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  dtcDesc: { color: "#A0AEC0", fontSize: 14, lineHeight: 20, marginBottom: 20, fontWeight: "500" },
+  dtcCode: { fontSize: 20, fontWeight: "800", color: COLORS.textDark },
+  severityBadge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  severityText: { fontSize: 10, fontWeight: "700", color: COLORS.textLight, letterSpacing: 0.5 },
+  dtcDesc: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 20, fontWeight: "500" },
   analyzeBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, borderWidth: 1, borderRadius: 12, paddingVertical: 14,
+    gap: 8, borderRadius: 100, paddingVertical: 14,
   },
-  analyzeBtnText: { fontWeight: "900", fontSize: 12, letterSpacing: 1 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
+  analyzeBtnText: { fontWeight: "700", color: COLORS.textLight, fontSize: 14 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40, paddingBottom: 100 },
   glowCircle: {
-    width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(0, 232, 123, 0.05)",
+    width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.cardLight,
     alignItems: "center", justifyContent: "center", marginBottom: 24,
-    borderWidth: 1, borderColor: "rgba(0, 232, 123, 0.2)",
-    shadowColor: "#00E87B", shadowOpacity: 0.2, shadowRadius: 30
   },
-  emptyTitle: { fontSize: 22, fontWeight: "900", color: "#00E87B", letterSpacing: 2 },
-  emptyBody: { fontSize: 13, color: "#7C8FA6", textAlign: "center", marginTop: 10, fontWeight: "600" },
+  emptyTitle: { fontSize: 24, fontWeight: "700", color: COLORS.textDark },
+  emptyBody: { fontSize: 15, color: COLORS.textMuted, textAlign: "center", marginTop: 8, fontWeight: "500" },
 });

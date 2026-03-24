@@ -16,10 +16,12 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.obd_simulator import (
     get_latest_frame,
     get_active_dtcs,
+    apply_control,
+    get_fault_pool,
     register_ws_client,
     unregister_ws_client,
 )
-from app.schemas.telemetry import TelemetryFrame, MockDTCResponse
+from app.schemas.telemetry import TelemetryFrame, MockDTCResponse, SimulatorControlRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,6 +43,35 @@ async def rest_active_dtcs():
         dtcs=get_active_dtcs(),
         scan_timestamp=time.time(),
     )
+@router.get("/mock/fault-pool", tags=["Mock Simulator"])
+async def rest_fault_pool():
+    """Returns the list of available DTC codes that can be injected."""
+    return {"fault_pool": get_fault_pool()}
+
+
+@router.post("/mock/control", tags=["Mock Simulator"])
+async def rest_simulator_control(body: SimulatorControlRequest):
+    """
+    Interactive simulator control panel.
+
+    Examples:
+    - `{"mode": "accelerating"}` — floor the throttle
+    - `{"speed_kmh": 80}` — hold speed at 80 km/h
+    - `{"inject_dtc": "P0300"}` — inject a fault code
+    - `{"clear_dtcs": true}` — clear all faults
+    - `{"reset": true}` — restart the simulation from cold idle
+    """
+    result = apply_control(
+        mode=body.mode,
+        speed_kmh=body.speed_kmh,
+        rpm=body.rpm,
+        throttle_pos_pct=body.throttle_pos_pct,
+        fuel_level_pct=body.fuel_level_pct,
+        inject_dtc=body.inject_dtc,
+        clear_dtcs=body.clear_dtcs or False,
+        reset=body.reset or False,
+    )
+    return result
 
 
 @router.websocket("/ws/telemetry")
