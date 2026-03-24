@@ -6,7 +6,7 @@
 
 ## What's New: The Bento Box UI Overhaul
 The application features a brand new **Bento Design System** using a luxurious Sage Green and Dark Emerald palette.
-- **Modern Dashboard:** Telemetry metrics (Speed, RPM, Coolant, Engine Load) are displayed in crisp, flat, rounded "Bento Box" cards.
+- **Modern Dashboard:** Telemetry metrics (Speed, RPM, Coolant, Engine Load) are displayed in crisp, flat, stalized ui.
 - **Intuitive Simulator Controls:** Interactive sliders and toggle buttons allow you to seamlessly change the vehicle's driving mode and instantly inject OBD-II faults, providing immediate visual feedback.
 - **Enhanced AI Diagnostics:** Active DTCs (Diagnostic Trouble Codes) are fed into a streamlined AI diagnosis UI to translate cryptic codes into consumer-friendly explanations.
 
