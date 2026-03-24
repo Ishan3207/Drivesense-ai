@@ -6,12 +6,11 @@
 
 ## Requirements
 
-To run this application, whether locally using traditional methods or via Docker, you'll need the following prerequisites installed on your system:
+Good news: **Docker handles everything for you.** You do **not** need to manually install Node.js, Python, or PostgreSQL on your machine to run DriveSense AI. 
 
-- **Docker & Docker Compose** (Recommended for easiest setup and running on any system)
-- **Node.js (v18+) & NPM** (Optional, for running the frontend manually via Expo)
-- **Python 3.11+** (Optional, for running the backend manually)
-- **PostgreSQL 15+** (Included in the Docker Compose setup)
+The only things you need to have installed are:
+
+- **Docker & Docker Compose** (The only software requirement)
 - **API Keys:**
   - OpenAI API Key or Google Gemini API Key (for the AI diagnostics integration)
 
