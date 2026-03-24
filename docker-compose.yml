@@ -23,13 +23,8 @@ services:
     container_name: drivesense_api
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/drivesense
-      - APP_ENV=development
-      - CORS_ORIGINS=*
-      # Add your API keys here or in a .env file:
-      # - OPENAI_API_KEY=your_openai_key
-      # - GOOGLE_GEMINI_API_KEY=your_gemini_key
+    env_file:
+      - ./drivesense-backend/.env
     depends_on:
       postgres:
         condition: service_healthy

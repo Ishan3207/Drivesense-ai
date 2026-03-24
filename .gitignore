@@ -1,0 +1,21 @@
+# Environment variable files – never commit real secrets
+drivesense-backend/.env
+drivesense-app/.env
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Node modules
+node_modules/
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+
+# OS
+.DS_Store
+Thumbs.db
