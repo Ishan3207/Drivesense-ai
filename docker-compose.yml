@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: drivesense_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: drivesense
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./drivesense-backend
+    container_name: drivesense_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/drivesense
+      - APP_ENV=development
+      - CORS_ORIGINS=*
+      # Add your API keys here or in a .env file:
+      # - OPENAI_API_KEY=your_openai_key
+      # - GOOGLE_GEMINI_API_KEY=your_gemini_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./drivesense-app
+    container_name: drivesense_web
+    ports:
+      - "8081:8081"
+    environment:
+      - EXPO_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

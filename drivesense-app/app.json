@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "DriveSense AI",
+    "slug": "drivesense-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "drivesense",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1117"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.drivesense.ai",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "DriveSense needs your location to monitor geofenced safety zones and alert you when entering school or hospital zones.",
+        "NSLocationWhenInUseUsageDescription": "DriveSense needs your location for geofence safety monitoring.",
+        "NSLocationAlwaysUsageDescription": "DriveSense monitors your location in the background to enforce speed limits in safety zones.",
+        "NSBluetoothAlwaysUsageDescription": "DriveSense connects to your ELM327 OBD-II adapter via Bluetooth to read vehicle diagnostics.",
+        "NSBluetoothPeripheralUsageDescription": "Required to connect to ELM327 OBD-II Bluetooth adapters."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D1117"
+      },
+      "package": "com.drivesense.ai",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow DriveSense AI to use your location for geofenced safety monitoring.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#00D4FF",
+          "sounds": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

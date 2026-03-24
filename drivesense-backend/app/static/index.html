@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveSense AI - Web Dashboard</title>
+
+    <!-- Leaflet.js for interactive map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        :root {
+            --bg:       #060C14;
+            --card-bg:  #0D1824;
+            --border:   rgba(255,255,255,0.07);
+            --accent:   #00D4FF;
+            --purple:   #7B61FF;
+            --danger:   #FF4757;
+            --warning:  #FFB800;
+            --success:  #00E87B;
+            --orange:   #FF8C00;
+            --muted:    #7C8FA6;
+            --text:     #E8F0FE;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem 1rem 3rem;
+            gap: 1.5rem;
+        }
+
+        /* ── Header ─────────────────────────────────────────── */
+        header { text-align: center; }
+        h1 {
+            font-size: clamp(2rem, 5vw, 2.8rem);
+            font-weight: 900;
+            background: linear-gradient(90deg, #00D4FF, #0066CC 60%, #7B61FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+        .status {
+            display: flex; align-items: center; gap: 0.5rem;
+            justify-content: center; margin-top: 0.4rem;
+            font-size: 0.9rem; color: var(--muted);
+        }
+        .dot {
+            height: 9px; width: 9px; border-radius: 50%;
+            background: var(--danger); box-shadow: 0 0 8px var(--danger);
+            transition: all 0.4s;
+        }
+        .dot.live { background: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+        /* ── Speed Alert Banner ──────────────────────────────── */
+        #speedAlert {
+            display: none;
+            width: 100%; max-width: 1100px;
+            background: linear-gradient(90deg, #FF1744, #FF4757, #FF1744);
+            background-size: 200% 100%;
+            border-radius: 14px;
+            padding: 1rem 2rem;
+            text-align: center;
+            animation: alert-slide-in 0.3s ease-out, banner-pulse 0.8s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(255,71,87,0.6), 0 0 80px rgba(255,71,87,0.2);
+            border: 2px solid #FF4757;
+        }
+        #speedAlert.active { display: block; }
+        @keyframes alert-slide-in {
+            from { opacity:0; transform: translateY(-20px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+        @keyframes banner-pulse {
+            0%,100% { box-shadow: 0 0 30px rgba(255,71,87,0.5); }
+            50%      { box-shadow: 0 0 60px rgba(255,71,87,0.9), 0 0 100px rgba(255,71,87,0.3); }
+        }
+        .alert-icon { font-size: 2rem; display: block; margin-bottom: 0.2rem; }
+        .alert-title {
+            font-size: 1.1rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 1.5px;
+        }
+        .alert-speed {
+            font-size: 3rem; font-weight: 900; color: #fff; line-height: 1;
+            text-shadow: 0 0 20px rgba(255,255,255,0.6);
+        }
+        .alert-sub { font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 0.3rem; }
+
+        /* ── Main Grid ───────────────────────────────────────── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+            width: 100%; max-width: 1100px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+
+        /* ── Gauge ───────────────────────────────────────────── */
+        .gauge { position: relative; width: 155px; height: 155px; }
+        .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .gauge circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+        .gauge .bg  { stroke: #182232; }
+        .gauge .prog {
+            stroke: var(--accent);
+            stroke-dasharray: 418;
+            stroke-dashoffset: 418;
+            transition: stroke-dashoffset 0.45s cubic-bezier(0.25,0.46,0.45,0.94);
+        }
+        .gauge-label {
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .g-val { font-size: 2.1rem; font-weight: 800; }
+        .g-unit { font-size: 0.75rem; color: var(--muted); margin-top: -4px; }
+
+        .card-label {
+            font-size: 0.8rem; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px; margin-top: 0.8rem;
+        }
+
+        /* Speeding gauge glow */
+        .gauge-speeding .prog { stroke: var(--danger); filter: drop-shadow(0 0 8px var(--danger)); }
+        .gauge-speeding .g-val { color: var(--danger); }
+
+        /* ── Stat Grid ───────────────────────────────────────── */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; margin-top: 0.5rem; }
+        .stat {
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px; padding: 0.9rem;
+            text-align: center; border: 1px solid var(--border);
+        }
+        .stat-val { font-size: 1.5rem; font-weight: 700; }
+        .stat-lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+
+        /* ── DTC List ────────────────────────────────────────── */
+        #dtcSection {
+            display: none; width: 100%; max-width: 1100px;
+            background: var(--card-bg); border-radius: 18px;
+            padding: 1.25rem 1.5rem; border: 1px solid var(--border);
+        }
+        #dtcSection.visible { display: block; }
+        .dtc-item {
+            background: rgba(255,71,87,0.1); border-left: 4px solid var(--danger);
+            padding: 0.7rem 1rem; margin-top: 0.7rem; border-radius: 6px;
+            color: var(--danger); font-weight: 700; font-size: 0.95rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        /* ── Nearby Map Section ──────────────────────────────── */
+        #nearbySection {
+            width: 100%; max-width: 1100px;
+            background: var(--card-bg); border-radius: 18px;
+            padding: 1.25rem 1.5rem; border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+        }
+        .section-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .section-title {
+            font-size: 1.1rem; font-weight: 700; color: var(--text);
+        }
+        .section-sub { font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+
+        /* Legend */
+        .map-legend {
+            display: flex; gap: 1.5rem; flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+        .legend-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.82rem; color: var(--muted);
+        }
+        .legend-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        /* Map container */
+        #map {
+            height: 400px; border-radius: 12px;
+            overflow: hidden; border: 1px solid var(--border);
+            z-index: 1;
+        }
+
+        /* Nearby lists below map */
+        .nearby-lists {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 1rem; margin-top: 1rem;
+        }
+        @media (max-width: 650px) { .nearby-lists { grid-template-columns: 1fr; } }
+
+        .nearby-list-title {
+            font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .nearby-item {
+            background: rgba(0,0,0,0.2); border-radius: 10px;
+            padding: 0.7rem 0.9rem; margin-bottom: 0.4rem;
+            display: flex; align-items: flex-start; justify-content: space-between;
+            border: 1px solid var(--border); font-size: 0.82rem;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .nearby-item:hover { background: rgba(255,255,255,0.04); }
+        .ni-name { font-weight: 600; color: var(--text); }
+        .ni-addr { color: var(--muted); margin-top: 1px; font-size: 0.75rem; }
+        .ni-rating {
+            font-size: 0.78rem; color: var(--warning); white-space: nowrap;
+            margin-left: 0.5rem; flex-shrink: 0;
+        }
+        .open-badge {
+            font-size: 0.7rem; padding: 1px 6px; border-radius: 20px;
+            font-weight: 600; margin-top: 2px; display: inline-block;
+        }
+        .open-badge.open   { background: rgba(0,232,123,0.15); color: var(--success); }
+        .open-badge.closed { background: rgba(255,71,87,0.15);  color: var(--danger); }
+
+        .loading-text { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 1rem; }
+
+        /* Leaflet popup styling fix for dark theme */
+        .leaflet-popup-content-wrapper {
+            background: #0D1824; color: #E8F0FE; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .leaflet-popup-tip { background: #0D1824; }
+        .leaflet-popup-content { font-family: 'Inter', sans-serif; font-size: 0.85rem; }
+        .popup-name { font-weight: 700; color: #E8F0FE; margin-bottom: 4px; }
+        .popup-detail { color: #7C8FA6; }
+        .popup-link {
+            display: inline-block; margin-top: 6px;
+            background: linear-gradient(90deg, #00D4FF, #0066CC);
+            color: white; text-decoration: none; padding: 4px 10px;
+            border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+        }
+
+        /* Leaflet tile dark filter */
+        .leaflet-tile { filter: invert(1) hue-rotate(200deg) brightness(0.85) contrast(0.9); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>DriveSense AI</h1>
+        <div class="status">
+            <div class="dot" id="connDot"></div>
+            <span id="connStatus">Connecting…</span>
+        </div>
+    </header>
+
+    <!-- Speed Alert Banner -->
+    <div id="speedAlert">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-title">⚠ Speed Alert — Slow Down!</div>
+        <div class="alert-speed" id="alertSpeed">0 km/h</div>
+        <div class="alert-sub">Speed limit exceeded · Keep below 80 km/h</div>
+    </div>
+
+    <!-- Gauges + Stats -->
+    <div class="grid">
+        <!-- Speed -->
+        <div class="card" id="speedCard">
+            <div class="gauge" id="speedGaugeWrap">
+                <svg><circle class="bg" cx="77" cy="77" r="66"/><circle class="prog" id="speedArc" cx="77" cy="77" r="66"/></svg>
+                <div class="gauge-label">
+                    <div class="g-val" id="speedVal">0</div>
+                    <div class="g-unit">km/h</div>
+                </div>
+            </div>
+            <div class="card-label">Speed</div>
+        </div>
+
+        <!-- RPM -->
+        <div class="card">
+            <div class="gauge">
+                <svg><circle class="bg" cx="77" cy="77" r="66"/><circle class="prog" id="rpmArc" cx="77" cy="77" r="66" style="stroke:var(--purple)"/></svg>
+                <div class="gauge-label">
+                    <div class="g-val" id="rpmVal" style="color:var(--purple)">0</div>
+                    <div class="g-unit">RPM</div>
+                </div>
+            </div>
+            <div class="card-label">Engine RPM</div>
+        </div>
+
+        <!-- Live Stats -->
+        <div class="card">
+            <div class="card-label" style="margin-top:0;margin-bottom:0.75rem">Live Stats</div>
+            <div class="stat-grid">
+                <div class="stat">
+                    <div class="stat-val" id="loadVal" style="color:var(--warning)">0%</div>
+                    <div class="stat-lbl">Load</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="tempVal" style="color:var(--danger)">0°C</div>
+                    <div class="stat-lbl">Coolant</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="fuelVal" style="color:var(--success)">0%</div>
+                    <div class="stat-lbl">Fuel</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="battVal" style="color:var(--accent)">0V</div>
+                    <div class="stat-lbl">Battery</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active DTCs -->
+    <div id="dtcSection">
+        <h3 style="font-size:1rem;font-weight:700;">⚠️ Active Diagnostic Trouble Codes</h3>
+        <div id="dtcList"></div>
+    </div>
+
+    <!-- Nearby Map -->
+    <div id="nearbySection">
+        <div class="section-header">
+            <div>
+                <div class="section-title">🗺️ Nearby Services</div>
+            </div>
+            <div class="section-sub" id="nearbyStatus">Loading…</div>
+        </div>
+        <div class="map-legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background:#2196F3;"></div>
+                <span>Mechanics / Repair</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background:#FF8C00;"></div>
+                <span>Petrol / Fuel Stations</span>
+            </div>
+        </div>
+        <div id="map"></div>
+        <div class="nearby-lists" id="nearbyLists">
+            <div class="loading-text">Loading nearby services…</div>
+        </div>
+    </div>
+
+    <script>
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const SPEED_LIMIT = 80;          // km/h alert threshold
+    const MAP_CENTER  = [37.7749, -122.4194]; // Simulated user location (San Francisco)
+    const C = 414.8; // stroke-dasharray circumference (2 * π * 66)
+
+    // ── WebSocket telemetry ────────────────────────────────────────────────────
+    const wsUrl = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/api/v1/ws/telemetry`;
+    let alertBeeping = false;
+
+    function playBeep() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+            osc.start(); osc.stop(ctx.currentTime + 0.35);
+        } catch(e) {}
+    }
+
+    let beepInterval = null;
+
+    function setSpeedAlert(speed, over) {
+        const banner = document.getElementById('speedAlert');
+        const gaugeWrap = document.getElementById('speedGaugeWrap');
+        document.getElementById('alertSpeed').textContent = `${Math.round(speed)} km/h`;
+        if (over) {
+            banner.classList.add('active');
+            gaugeWrap.classList.add('gauge-speeding');
+            document.getElementById('speedVal').style.color = 'var(--danger)';
+            if (!beepInterval) {
+                playBeep();
+                beepInterval = setInterval(playBeep, 1800);
+            }
+        } else {
+            banner.classList.remove('active');
+            gaugeWrap.classList.remove('gauge-speeding');
+            document.getElementById('speedVal').style.color = '';
+            if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
+        }
+    }
+
+    function setGauge(arcEl, pct, maxFrac = 0.78) {
+        arcEl.style.strokeDashoffset = C - (Math.min(pct, 1) * C * maxFrac);
+    }
+
+    function connect() {
+        const ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+            document.getElementById('connDot').classList.add('live');
+            document.getElementById('connStatus').textContent = 'Connected to OBD-II Simulator';
+        };
+        ws.onclose = () => {
+            document.getElementById('connDot').classList.remove('live');
+            document.getElementById('connStatus').textContent = 'Disconnected. Reconnecting…';
+            setTimeout(connect, 2200);
+        };
+        ws.onmessage = (e) => {
+            const d = JSON.parse(e.data);
+
+            // Speed gauge
+            const speedPct = d.speed_kmh / 200;
+            setGauge(document.getElementById('speedArc'), speedPct);
+            document.getElementById('speedVal').textContent = Math.round(d.speed_kmh);
+            setSpeedAlert(d.speed_kmh, d.speed_kmh > SPEED_LIMIT);
+
+            // RPM gauge
+            setGauge(document.getElementById('rpmArc'), d.rpm / 8000);
+            document.getElementById('rpmVal').textContent = Math.round(d.rpm);
+
+            // Stats
+            document.getElementById('loadVal').textContent = `${Math.round(d.engine_load_pct)}%`;
+            document.getElementById('tempVal').textContent = `${Math.round(d.coolant_temp_c)}°C`;
+            document.getElementById('fuelVal').textContent = `${Math.round(d.fuel_level_pct)}%`;
+            document.getElementById('battVal').textContent = `${d.battery_voltage.toFixed(1)}V`;
+
+            // DTCs
+            const sec = document.getElementById('dtcSection');
+            const list = document.getElementById('dtcList');
+            if (d.active_dtcs && d.active_dtcs.length > 0) {
+                sec.classList.add('visible');
+                list.innerHTML = d.active_dtcs.map(c =>
+                    `<div class="dtc-item">🔴 <span>${c}</span> – Detected via OBD-II Scan</div>`
+                ).join('');
+            } else {
+                sec.classList.remove('visible');
+            }
+        };
+    }
+
+    connect();
+
+    // ── Leaflet Map ────────────────────────────────────────────────────────────
+    const map = L.map('map', { zoomControl: true, attributionControl: false })
+                  .setView(MAP_CENTER, 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // User location marker
+    const userIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:18px;height:18px;background:#00D4FF;border:3px solid white;border-radius:50%;box-shadow:0 0 12px #00D4FF;"></div>`,
+        iconSize: [18, 18], iconAnchor: [9, 9]
+    });
+    L.marker(MAP_CENTER, {icon: userIcon}).addTo(map)
+        .bindPopup('<div class="popup-name">📍 Your Location</div>');
+
+    function makeIcon(color, emoji) {
+        return L.divIcon({
+            className: '',
+            html: `<div style="
+                width: 34px; height: 34px;
+                background: ${color};
+                border: 2.5px solid white;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                box-shadow: 0 3px 14px rgba(0,0,0,0.5);
+                display: flex; align-items: center; justify-content: center;
+            "><span style="transform:rotate(45deg);font-size:14px;">${emoji}</span></div>`,
+            iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -34]
+        });
+    }
+
+    const mechIcon = makeIcon('#2196F3', '🔧');
+    const fuelIcon = makeIcon('#FF8C00', '⛽');
+
+    function stars(rating) {
+        if (!rating) return '';
+        const full = Math.round(rating);
+        return '★'.repeat(full) + '☆'.repeat(5 - full) + ` ${rating.toFixed(1)}`;
+    }
+
+    function addMarker(place, icon) {
+        if (!place.latitude || !place.longitude) return;
+        const open = place.open_now === true ? '<span class="open-badge open">Open</span>'
+                   : place.open_now === false ? '<span class="open-badge closed">Closed</span>'
+                   : '';
+        const popup = `
+            <div class="popup-name">${place.name}</div>
+            <div class="popup-detail">${place.address}</div>
+            <div class="popup-detail">${stars(place.rating)} &nbsp;·&nbsp; ${place.distance_km ? place.distance_km + ' km' : ''} ${open}</div>
+            <a class="popup-link" href="${place.maps_url}" target="_blank">📍 Directions</a>
+        `;
+        L.marker([place.latitude, place.longitude], {icon})
+            .addTo(map).bindPopup(popup);
+    }
+
+    function buildList(places, containerId) {
+        const el = document.getElementById(containerId);
+        el.innerHTML = places.map(p => {
+            const badge = p.open_now === true  ? '<span class="open-badge open">Open</span>'
+                        : p.open_now === false ? '<span class="open-badge closed">Closed</span>'
+                        : '';
+            return `<div class="nearby-item" onclick="window.open('${p.maps_url}','_blank')">
+                <div>
+                    <div class="ni-name">${p.name}</div>
+                    <div class="ni-addr">${p.address}</div>
+                    ${badge}
+                </div>
+                <div class="ni-rating">${p.rating ? '★ ' + p.rating.toFixed(1) : ''}<br>${p.distance_km ? p.distance_km + ' km' : ''}</div>
+            </div>`;
+        }).join('');
+    }
+
+    async function loadNearby() {
+        try {
+            const [lat, lng] = MAP_CENTER;
+            const res = await fetch(`/api/v1/nearby/all?lat=${lat}&lng=${lng}&max_results=5`);
+            const data = await res.json();
+
+            data.mechanics.forEach(p => addMarker(p, mechIcon));
+            data.fuel.forEach(p => addMarker(p, fuelIcon));
+
+            const total = data.mechanics.length + data.fuel.length;
+            document.getElementById('nearbyStatus').textContent =
+                `${total} places found (mock data)`;
+
+            // Build side lists
+            document.getElementById('nearbyLists').innerHTML = `
+                <div>
+                    <div class="nearby-list-title" style="color:#2196F3">🔧 Mechanics (${data.mechanics.length})</div>
+                    <div id="mechList"></div>
+                </div>
+                <div>
+                    <div class="nearby-list-title" style="color:var(--orange)">⛽ Fuel Stations (${data.fuel.length})</div>
+                    <div id="fuelList"></div>
+                </div>
+            `;
+            buildList(data.mechanics, 'mechList');
+            buildList(data.fuel, 'fuelList');
+
+        } catch(err) {
+            document.getElementById('nearbyStatus').textContent = 'Failed to load nearby places';
+            console.error(err);
+        }
+    }
+
+    // Small delay so map tiles load first
+    setTimeout(loadNearby, 800);
+    </script>
+</body>
+</html>
