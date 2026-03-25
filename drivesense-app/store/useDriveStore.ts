@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,17 @@ export interface ActiveZone {
   speed_excess_kmh: number;
 }
 
+/** Vehicle profile set by the user via the My Car screen */
+export interface VehicleProfile {
+  make: string;
+  model: string;
+  year: number;
+  mileage_km?: number;
+  color?: string;
+}
+
+const VEHICLE_PROFILE_KEY = "@drivesense/vehicle_profile";
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 interface DriveState {
@@ -82,6 +94,11 @@ interface DriveState {
   // UI state
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
+
+  // Vehicle Profile
+  vehicleProfile: VehicleProfile | null;
+  setVehicleProfile: (profile: VehicleProfile) => Promise<void>;
+  loadVehicleProfile: () => Promise<void>;
 }
 
 export const useDriveStore = create<DriveState>((set, get) => ({
@@ -124,4 +141,28 @@ export const useDriveStore = create<DriveState>((set, get) => ({
   // UI
   isScanning: false,
   setIsScanning: (scanning) => set({ isScanning: scanning }),
+
+  // Vehicle Profile
+  vehicleProfile: null,
+
+  setVehicleProfile: async (profile) => {
+    set({ vehicleProfile: profile });
+    try {
+      await AsyncStorage.setItem(VEHICLE_PROFILE_KEY, JSON.stringify(profile));
+    } catch (err) {
+      console.warn("[DriveSense] Failed to persist vehicle profile:", err);
+    }
+  },
+
+  loadVehicleProfile: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(VEHICLE_PROFILE_KEY);
+      if (raw) {
+        const profile: VehicleProfile = JSON.parse(raw);
+        set({ vehicleProfile: profile });
+      }
+    } catch (err) {
+      console.warn("[DriveSense] Failed to load vehicle profile:", err);
+    }
+  },
 }));

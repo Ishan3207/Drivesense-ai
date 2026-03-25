@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useDriveStore } from "@/store/useDriveStore";
-import { fetchActiveDTCs, analyzeDTC } from "@/services/api";
+import { fetchActiveDTCs, analyzeDTC, AppError } from "@/services/api";
 import type { DTCEntry } from "@/store/useDriveStore";
 
 const COLORS = {
@@ -68,26 +68,37 @@ export default function DiagnosticsScreen() {
   const router = useRouter();
   const { activeDTCs, setActiveDTCs, setDiagnosticResult, setSelectedDTC } = useDriveStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [analyzingCode, setAnalyzingCode] = useState<string | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
+    setRefreshError(null);
     try {
       const dtcs = await fetchActiveDTCs();
       setActiveDTCs(dtcs);
+    } catch (err) {
+      const msg = err instanceof AppError && err.isNetwork
+        ? "Cannot reach backend. Check your connection."
+        : "Failed to refresh faults. Pull down to retry.";
+      setRefreshError(msg);
     } finally { setRefreshing(false); }
   }, []);
 
   const handleAnalyze = useCallback(async (code: string) => {
-    setAnalyzingCode(code); setSelectedDTC(code);
+    setAnalyzingCode(code); setSelectedDTC(code); setAnalyzeError(null);
     try {
       const result = await analyzeDTC(code);
       setDiagnosticResult(code, result);
-    } catch {
-      // ignore, let detail screen handle empty state
+      router.push("/diagnostic-detail");
+    } catch (err) {
+      const msg = err instanceof AppError
+        ? err.message
+        : "Failed to analyze fault. Please try again.";
+      setAnalyzeError(msg);
     } finally {
       setAnalyzingCode(null);
-      router.push("/diagnostic-detail");
     }
   }, []);
 
@@ -97,6 +108,20 @@ export default function DiagnosticsScreen() {
         <Text style={s.title}>System Diagnostics</Text>
         <Text style={s.subtitle}>OBD-II FAULT LOGS</Text>
       </View>
+
+      {refreshError && (
+        <View style={s.errorBanner}>
+          <Ionicons name="cloud-offline" size={16} color="#DC2626" />
+          <Text style={s.errorBannerText}>{refreshError}</Text>
+        </View>
+      )}
+
+      {analyzeError && (
+        <View style={[s.errorBanner, { backgroundColor: "#FEF3C7", borderColor: "#F59E0B" }]}>
+          <Ionicons name="warning" size={16} color="#D97706" />
+          <Text style={[s.errorBannerText, { color: "#92400E" }]}>{analyzeError}</Text>
+        </View>
+      )}
 
       {activeDTCs.length === 0 ? (
         <View style={s.empty}>
@@ -151,4 +176,10 @@ const s = StyleSheet.create({
   },
   emptyTitle: { fontSize: 24, fontWeight: "700", color: COLORS.textDark },
   emptyBody: { fontSize: 15, color: COLORS.textMuted, textAlign: "center", marginTop: 8, fontWeight: "500" },
+  errorBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 20, marginBottom: 8, padding: 12,
+    backgroundColor: "#FEF2F2", borderRadius: 12, borderWidth: 1, borderColor: "#FECACA",
+  },
+  errorBannerText: { flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "500" },
 });

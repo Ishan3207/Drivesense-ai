@@ -155,15 +155,17 @@ export default function SimulatorScreen() {
 
   const [activeMode, setActiveMode] = useState<DrivingMode>("idle");
   const [faultPool, setFaultPool] = useState<FaultEntry[]>([]);
+  const [faultPoolError, setFaultPoolError] = useState(false);
   const [selectedFault, setSelectedFault] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [lastAction, setLastAction] = useState<string>("");
+  const [lastActionOk, setLastActionOk] = useState(true);
 
   useEffect(() => {
     fetchFaultPool().then((pool) => {
       setFaultPool(pool);
       if (pool.length > 0) setSelectedFault(pool[0].code);
-    }).catch(() => {});
+    }).catch(() => { setFaultPoolError(true); });
   }, []);
 
   const doControl = useCallback(async (body: Record<string, unknown>, label: string) => {
@@ -171,8 +173,10 @@ export default function SimulatorScreen() {
     try {
       await sendControl(body);
       setLastAction(`✓ ${label}`);
+      setLastActionOk(true);
     } catch {
-      setLastAction("✗ Failed – is backend running?");
+      setLastAction("✗ Failed – is the backend running?");
+      setLastActionOk(false);
     } finally { setBusy(false); }
   }, []);
 
@@ -213,7 +217,7 @@ export default function SimulatorScreen() {
 
         {!!lastAction && (
           <View style={scr.feedbackRow}>
-            <Text style={{ color: lastAction.startsWith("✓") ? COLORS.primary : COLORS.error, fontSize: 13, fontWeight: "600" }}>
+            <Text style={{ color: lastActionOk ? COLORS.primary : COLORS.error, fontSize: 13, fontWeight: "600" }}>
               {lastAction}
             </Text>
             {busy && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 8 }} />}
@@ -253,19 +257,26 @@ export default function SimulatorScreen() {
         />
 
         <Text style={scr.sectionTitle}>FAULT CODES</Text>
-        <View style={scr.faultBox}>
-          {faultPool.map((f) => (
-            <Pressable
-              key={f.code}
-              style={[scr.faultChip, selectedFault === f.code && { backgroundColor: severityColor(f.severity) }]}
-              onPress={() => setSelectedFault(f.code)}
-            >
-              <Text style={[scr.chipCode, { color: selectedFault === f.code ? COLORS.textLight : COLORS.textDark }]}>
-                {f.code}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {faultPoolError ? (
+          <View style={scr.faultErrBox}>
+            <Ionicons name="cloud-offline" size={16} color={COLORS.error} />
+            <Text style={scr.faultErrText}>Could not load fault pool – backend offline.</Text>
+          </View>
+        ) : (
+          <View style={scr.faultBox}>
+            {faultPool.map((f) => (
+              <Pressable
+                key={f.code}
+                style={[scr.faultChip, selectedFault === f.code && { backgroundColor: severityColor(f.severity) }]}
+                onPress={() => setSelectedFault(f.code)}
+              >
+                <Text style={[scr.chipCode, { color: selectedFault === f.code ? COLORS.textLight : COLORS.textDark }]}>
+                  {f.code}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
         
         {selectedFault && (
           <View style={scr.selectedFault}>
@@ -313,4 +324,9 @@ const scr = StyleSheet.create({
   dtcBtnRow: { flexDirection: "row", gap: 16, marginTop: 16 },
   dtcBtn: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 18, borderRadius: 100 },
   dtcBtnTxt: { fontSize: 14, fontWeight: "700", letterSpacing: 0.5 },
+  faultErrBox: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#FECACA",
+  },
+  faultErrText: { color: "#DC2626", fontSize: 13, fontWeight: "500", flex: 1 },
 });

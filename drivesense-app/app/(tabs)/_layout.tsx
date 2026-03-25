@@ -1,8 +1,14 @@
 import { Tabs as ExpoTabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
+import { useEffect } from "react";
+import { useDriveStore } from "@/store/useDriveStore";
 
 export default function TabLayout() {
+  // Load persisted vehicle profile when the app first mounts
+  const loadVehicleProfile = useDriveStore((s) => s.loadVehicleProfile);
+  useEffect(() => { loadVehicleProfile(); }, []);
+
   return (
     <ExpoTabs
       screenOptions={{
@@ -68,6 +74,15 @@ export default function TabLayout() {
           title: "History",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time" size={size} color={color} />
+          ),
+        }}
+      />
+      <ExpoTabs.Screen
+        name="profile"
+        options={{
+          title: "My Car",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="car-sport" size={size} color={color} />
           ),
         }}
       />

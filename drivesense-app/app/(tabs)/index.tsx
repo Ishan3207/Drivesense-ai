@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 
 import { useDriveStore } from "@/store/useDriveStore";
-import { fetchActiveDTCs } from "@/services/api";
+import { fetchActiveDTCs, AppError } from "@/services/api";
 import { Config } from "@/constants/config";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -114,7 +114,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const {
     telemetry, driverScore, activeDTCs, isConnected, isAlerting, activeZone,
-    setActiveDTCs, isScanning, setIsScanning
+    setActiveDTCs, isScanning, setIsScanning, vehicleProfile,
   } = useDriveStore();
   const [scanErr, setScanErr] = useState<string|null>(null);
 
@@ -127,8 +127,18 @@ export default function DashboardScreen() {
       setActiveDTCs(dtcs);
       if (dtcs.length === 0) Alert.alert("✅ System Nominal", "No faults detected.");
       else router.push("/(tabs)/diagnostics");
-    } catch {
-      setScanErr("Could not connect to vehicle. Server unreachable.");
+    } catch (err) {
+      const msg = err instanceof AppError
+        ? (err.isNetwork ? "Cannot reach the vehicle server. Check your connection." : err.message)
+        : "Could not connect to vehicle. Server unreachable.";
+      Alert.alert(
+        "Scan Failed",
+        msg,
+        [
+          { text: "Dismiss", style: "cancel" },
+          { text: "Retry", onPress: handleScan },
+        ]
+      );
     } finally { setIsScanning(false); }
   }, []);
 
@@ -138,17 +148,50 @@ export default function DashboardScreen() {
 
         {/* ── Top Header ── */}
         <View style={s.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={s.logo}>Drive<Text style={{color: COLORS.primary}}>Sense</Text></Text>
             <View style={s.statusRow}>
               <View style={[s.blob, { backgroundColor: isConnected ? COLORS.primary : COLORS.error }]} />
               <Text style={s.subtitle}>{isConnected ? "Connected" : "Offline"}</Text>
             </View>
           </View>
-          <TouchableOpacity style={s.iconBtn}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => router.push("/(tabs)/profile")}>
             <Ionicons name="person-circle" size={36} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* ── Vehicle Info Banner ── */}
+        {vehicleProfile?.make && vehicleProfile?.model ? (
+          <TouchableOpacity
+            style={s.vehicleBanner}
+            onPress={() => router.push("/(tabs)/profile")}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="car-sport" size={18} color={COLORS.primary} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={s.vehicleName}>
+                {vehicleProfile.make} {vehicleProfile.model}
+              </Text>
+              <Text style={s.vehicleMeta}>
+                {vehicleProfile.year}
+                {vehicleProfile.color ? ` · ${vehicleProfile.color}` : ""}
+                {vehicleProfile.mileage_km ? ` · ${vehicleProfile.mileage_km.toLocaleString()} km` : ""}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[s.vehicleBanner, { borderColor: "#D1FAE5", backgroundColor: "#F0FDF4" }]}
+            onPress={() => router.push("/(tabs)/profile")}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={COLORS.primary} />
+            <Text style={[s.vehicleName, { flex: 1, marginLeft: 10, color: COLORS.primary }]}>
+              Set up your car →
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Active Faults Alert (Orange Card) ── */}
         {activeDTCs.length > 0 && (
@@ -221,7 +264,6 @@ export default function DashboardScreen() {
           ))}
         </View>
         
-        {scanErr && <Text style={s.err}>{scanErr}</Text>}
         <View style={{height: 40}} />
       </ScrollView>
     </View>
@@ -231,7 +273,16 @@ export default function DashboardScreen() {
 const s = StyleSheet.create({
   bg: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 60 : 40, paddingBottom: 50 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+
+  vehicleBanner: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.cardLight, borderRadius: 18,
+    paddingHorizontal: 16, paddingVertical: 12,
+    marginBottom: 16, borderWidth: 1, borderColor: "#E5E7EB",
+  },
+  vehicleName: { fontSize: 14, fontWeight: "700", color: COLORS.textDark },
+  vehicleMeta: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   logo: { fontSize: 28, fontWeight: "700", color: COLORS.textDark, letterSpacing: -0.5 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   blob: { width: 8, height: 8, borderRadius: 4 },
@@ -268,5 +319,4 @@ const s = StyleSheet.create({
   statVal: { color: COLORS.textDark, fontSize: 20, fontWeight: "700" },
   statLbl: { color: COLORS.textMuted, fontSize: 13, fontWeight: "500", marginTop: 2 },
   
-  err: { color: COLORS.error, fontSize: 13, textAlign: "center", marginTop: 24, fontWeight: "500" },
 });
