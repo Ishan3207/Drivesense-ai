@@ -1,12 +1,20 @@
 # DriveSense AI
 
-**DriveSense AI** is a comprehensive, proactive vehicle health and geofenced safety ecosystem. It consists of a real-time mock OBD-II simulator backend to broadcast telemetry data and a React Native mobile application providing a dynamic **Bento Box-style** dashboard with diagnostics powered by Advanced AI.
+**DriveSense AI** is a comprehensive, proactive vehicle health and geofenced safety ecosystem. It consists of a real-time mock OBD-II simulator backend to broadcast telemetry data and a React Native mobile application providing a dynamic **modern** dashboard with diagnostics powered by Advanced AI.
 
 ---
 
-## What's New: The Bento Box UI Overhaul
+## Quick Start
+```bash
+git clone https://github.com/Ishan3207/Drivesense-ai.git
+cd Drivesense-ai
+docker-compose up --build
+```
+
+
+## What's New: The modern UI Overhaul
 The application features a brand new **Bento Design System** using a luxurious Sage Green and Dark Emerald palette.
-- **Modern Dashboard:** Telemetry metrics (Speed, RPM, Coolant, Engine Load) are displayed in crisp, flat, rounded "Bento Box" cards.
+- **Modern Dashboard:** Telemetry metrics (Speed, RPM, Coolant, Engine Load) are displayed in crisp, flat, stalized ui.
 - **Intuitive Simulator Controls:** Interactive sliders and toggle buttons allow you to seamlessly change the vehicle's driving mode and instantly inject OBD-II faults, providing immediate visual feedback.
 - **Enhanced AI Diagnostics:** Active DTCs (Diagnostic Trouble Codes) are fed into a streamlined AI diagnosis UI to translate cryptic codes into consumer-friendly explanations.
 
@@ -24,9 +32,6 @@ Good news: **Docker handles everything for you.** You do **not** need to manuall
 The only things you need to have installed are:
 
 - **Docker & Docker Compose** (The only software requirement)
-- **API Keys:**
-  - OpenAI API Key or Google Gemini API Key (for the AI diagnostics integration)
-
 ---
 
 ## Features & Program Functions
