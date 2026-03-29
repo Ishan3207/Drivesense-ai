@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Dimensions, Platform
@@ -117,6 +117,17 @@ export default function DashboardScreen() {
     setActiveDTCs, isScanning, setIsScanning, vehicleProfile,
   } = useDriveStore();
   const [scanErr, setScanErr] = useState<string|null>(null);
+  const [speedPulse, setSpeedPulse] = useState(true);
+
+  const speed = telemetry?.speed_kmh ?? 0;
+  const isOverSpeed = speed > 60;
+
+  // Pulse the speed-warning banner
+  useEffect(() => {
+    if (!isOverSpeed) return;
+    const id = setInterval(() => setSpeedPulse(p => !p), 600);
+    return () => clearInterval(id);
+  }, [isOverSpeed]);
 
   const tip = telemetry ? getTip(telemetry.rpm, telemetry.engine_load_pct, telemetry.speed_kmh) : "Connect vehicle for insights.";
 
@@ -191,6 +202,17 @@ export default function DashboardScreen() {
               Set up your car →
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* ── Speed Warning Banner ── */}
+        {isOverSpeed && (
+          <View style={[s.speedWarn, { opacity: speedPulse ? 1 : 0.55 }]}>
+            <Ionicons name="speedometer" size={22} color="#fff" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={s.speedWarnTitle}>⚠️  Speed Alert – Slow Down!</Text>
+              <Text style={s.speedWarnSub}>{Math.round(speed)} km/h · Limit 60 km/h</Text>
+            </View>
+          </View>
         )}
 
         {/* ── Active Faults Alert (Orange Card) ── */}
@@ -318,5 +340,13 @@ const s = StyleSheet.create({
   statIconWrap: { backgroundColor: COLORS.background, alignSelf: "flex-start", padding: 10, borderRadius: 16, marginBottom: 12 },
   statVal: { color: COLORS.textDark, fontSize: 20, fontWeight: "700" },
   statLbl: { color: COLORS.textMuted, fontSize: 13, fontWeight: "500", marginTop: 2 },
-  
+
+  speedWarn: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.error, borderRadius: 24,
+    paddingHorizontal: 20, paddingVertical: 16,
+    marginBottom: 16,
+  },
+  speedWarnTitle: { color: "#fff", fontSize: 15, fontWeight: "800" },
+  speedWarnSub:   { color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "600", marginTop: 2 },
 });

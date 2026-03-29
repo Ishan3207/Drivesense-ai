@@ -127,16 +127,28 @@ async def _call_openai(system_prompt: str, user_message: str) -> str:
 
 
 async def _call_gemini(system_prompt: str, user_message: str) -> str:
-    import google.generativeai as genai
-    genai.configure(api_key=settings.google_gemini_api_key)
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=system_prompt,
-        generation_config=genai.GenerationConfig(
+    import re
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=settings.google_gemini_api_key)
+
+    full_prompt = f"{system_prompt}\n\n{user_message}"
+
+    response = await client.aio.models.generate_content(
+        model=settings.gemini_model,
+        contents=full_prompt,
+        config=types.GenerateContentConfig(
             response_mime_type="application/json",
             temperature=0.2,
-            max_output_tokens=1024,
+            max_output_tokens=2048,
         ),
     )
-    response = await model.generate_content_async(user_message)
-    return response.text
+
+    raw = response.text or ""
+
+    # Strip markdown fences if the model wrapped the JSON anyway
+    raw = re.sub(r"^```(?:json)?\s*", "", raw.strip())
+    raw = re.sub(r"\s*```$", "", raw.strip())
+
+    return raw

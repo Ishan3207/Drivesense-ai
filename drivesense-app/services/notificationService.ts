@@ -9,15 +9,18 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 // Configure how notifications appear when app is foregrounded
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function requestNotificationPermissions() {
+  if (Platform.OS === "web") return;
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== "granted") {
     console.warn("[Notifications] Permission not granted.");
@@ -42,6 +45,7 @@ export async function triggerSpeedAlert(
   excessKmh: number,
   limitKmh: number,
 ) {
+  if (Platform.OS === "web") return;
   const now = Date.now();
   if (now - lastAlertTime < ALERT_COOLDOWN_MS) return;
   lastAlertTime = now;
@@ -60,5 +64,6 @@ export async function triggerSpeedAlert(
 }
 
 export async function clearAllAlertNotifications() {
+  if (Platform.OS === "web") return;
   await Notifications.dismissAllNotificationsAsync();
 }
